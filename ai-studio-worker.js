@@ -11,6 +11,7 @@ class AiStudioWorker {
         this.driver = null;
         this.wait = null;
         this.profilePath = path.join(os.tmpdir(), 'TLCK');
+        this.tempProfilePath = null; // Store the temp profile path for cleanup
         this.initializeDriver();
     }
 
@@ -27,7 +28,12 @@ class AiStudioWorker {
     }
 
     createChromeOptions() {
-        const tempProfile = path.join(os.tmpdir(), 'selenium_profile');
+        // Use consistent profile directory - reuse the same profile each time
+        const tempProfile = this.profilePath; // Use the existing profilePath from constructor
+        
+        // Store the temp profile path for cleanup
+        this.tempProfilePath = tempProfile;
+        
         fs.ensureDirSync(tempProfile);
 
         const options = new chrome.Options();
@@ -502,6 +508,10 @@ class AiStudioWorker {
         if (this.driver) {
             await this.driver.quit();
         }
+        
+        // Don't clean up the profile directory since we want to reuse it
+        // The profile will be preserved for the next run
+        console.log('✅ Chrome driver closed, profile preserved for next run');
     }
 }
 
