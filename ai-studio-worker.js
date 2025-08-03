@@ -370,7 +370,7 @@ class AiStudioWorker {
 
             let resultData = null;
 
-            if (['stock', 'news'].includes(type)) {
+            if (['stock', 'news', 'market'].includes(type)) {
                 // xoa du lieu trong clipboard
                 await this.driver.executeScript('navigator.clipboard.writeText("");');
                 console.log('✅ Đã xóa clipboard trước khi lấy kết quả');
