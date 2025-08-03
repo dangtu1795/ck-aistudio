@@ -51,7 +51,6 @@ function main() {
     checkDependencies();
     checkChrome();
 
-    console.log('🌟 Starting server on http://0.0.0.0:6000');
     console.log('📝 Server logs:');
     console.log('─'.repeat(50));
 
