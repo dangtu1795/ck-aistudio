@@ -4,7 +4,7 @@ const { Queue } = require('./utils/queue');
 const AiStudioWorker = require('./ai-studio-worker');
 
 const app = express();
-const port = 6000;
+const port = 5000;
 
 // Middleware
 app.use(express.json());

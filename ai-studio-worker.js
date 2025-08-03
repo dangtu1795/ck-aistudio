@@ -38,6 +38,22 @@ class AiStudioWorker {
         options.addArguments('--disable-gpu');
         options.addArguments('--disable-features=VizDisplayCompositor');
         options.addArguments('--remote-debugging-port=0');
+        // Suppress specific error messages
+        options.addArguments('--disable-logging');
+        options.addArguments('--log-level=3');
+        options.addArguments('--silent');
+        options.addArguments('--disable-background-timer-throttling');
+        options.addArguments('--disable-backgrounding-occluded-windows');
+        options.addArguments('--disable-renderer-backgrounding');
+        options.addArguments('--disable-features=TranslateUI');
+        options.addArguments('--disable-ipc-flooding-protection');
+        options.addArguments('--disable-extensions');
+        options.addArguments('--disable-component-extensions-with-background-pages');
+        options.addArguments('--disable-default-apps');
+        options.addArguments('--disable-sync');
+        options.addArguments('--disable-background-networking');
+        options.addArguments('--disable-gcm-provider');
+        options.addArguments('--disable-on-device-model');
         options.setPageLoadStrategy('eager');
 
         return options;
