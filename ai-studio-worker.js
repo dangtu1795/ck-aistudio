@@ -434,6 +434,9 @@ class AiStudioWorker {
                 const finalBlock = contentBlocks[contentBlocks.length - 1];
                 resultData = await finalBlock.getText();
                 resultData = resultData.trim();
+                console.log('before process');
+                console.log(resultData);
+                console.log('end before process');
                 // nếu type là 'restructure' thì xử lý kết quả html
                 if (type === 'restructure') {
                     // resultData là 1 chuỗi string bao gồm text và các html string.
