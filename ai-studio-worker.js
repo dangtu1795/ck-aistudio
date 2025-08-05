@@ -451,13 +451,51 @@ class AiStudioWorker {
                     
                     // Loại bỏ tất cả text nodes không nằm trong thẻ HTML nào
                     const cleanedHtml = cheerio.load(resultData);
-                    cleanedHtml('*').contents().filter(function() {
-                        return this.type === 'text' && this.parent.type === 'root';
+                    
+                    // Chiến lược: Chỉ giữ lại text nodes nằm trong các thẻ HTML có ý nghĩa
+                    // và loại bỏ tất cả text nodes ở cấp độ cao (body, html, root)
+                    
+                    // 1. Loại bỏ tất cả text nodes trực tiếp con của body
+                    cleanedHtml('body').contents().filter(function() {
+                        return this.type === 'text';
                     }).remove();
                     
-                    // Loại bỏ text nodes trống hoặc chỉ chứa whitespace ở mọi cấp độ
+                    // 2. Loại bỏ tất cả text nodes trực tiếp con của html
+                    cleanedHtml('html').contents().filter(function() {
+                        return this.type === 'text';
+                    }).remove();
+                    
+                    // 3. Loại bỏ tất cả text nodes ở root level
+                    cleanedHtml.root().contents().filter(function() {
+                        return this.type === 'text';
+                    }).remove();
+                    
+                    // 4. Loại bỏ text nodes trực tiếp con của div#restructure (không nằm trong thẻ con)
+                    cleanedHtml('#restructure').contents().filter(function() {
+                        return this.type === 'text';
+                    }).remove();
+                    
+                    // 5. Loại bỏ text nodes trống hoặc chỉ chứa whitespace
                     cleanedHtml('*').contents().filter(function() {
                         return this.type === 'text' && !this.data.trim();
+                    }).remove();
+                    
+                    // 6. Loại bỏ text nodes không có parent là thẻ có ý nghĩa (p, h1, h2, h3, li, span, strong, em, div với class/style)
+                    cleanedHtml('*').contents().filter(function() {
+                        if (this.type !== 'text') return false;
+                        if (!this.data.trim()) return true; // Loại bỏ text trống
+                        
+                        const parent = this.parent;
+                        if (!parent || !parent.name) return true; // Loại bỏ nếu không có parent tag
+                        
+                        // Danh sách các thẻ được phép chứa text có ý nghĩa
+                        const allowedTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'span', 'strong', 'em', 'b', 'i', 'u', 'a', 'td', 'th', 'label'];
+                        
+                        // Chỉ giữ text nếu parent là thẻ được phép, hoặc là div có class/style (có format)
+                        const isAllowedTag = allowedTags.includes(parent.name);
+                        const isDivWithAttributes = parent.name === 'div' && (parent.attribs.class || parent.attribs.style);
+                        
+                        return !(isAllowedTag || isDivWithAttributes);
                     }).remove();
                     
                     resultData = cleanedHtml.html();
