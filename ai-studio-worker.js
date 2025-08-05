@@ -489,7 +489,7 @@ class AiStudioWorker {
                         if (!parent || !parent.name) return true; // Loại bỏ nếu không có parent tag
                         
                         // Danh sách các thẻ được phép chứa text có ý nghĩa
-                        const allowedTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'span', 'strong', 'em', 'b', 'i', 'u', 'a', 'td', 'th', 'label'];
+                        const allowedTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'span', 'strong', 'em', 'b', 'i', 'u', 'a', 'td', 'th', 'label', 'style', 'script'];
                         
                         // Chỉ giữ text nếu parent là thẻ được phép, hoặc là div có class/style (có format)
                         const isAllowedTag = allowedTags.includes(parent.name);
