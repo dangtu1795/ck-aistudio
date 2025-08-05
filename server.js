@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Job queue and valid types
 const jobQueue = new Queue();
-const VALID_TYPES = ['stock', 'news', 'market', 'checknews', 'asset'];
+const VALID_TYPES = ['stock', 'news', 'market', 'checknews', 'restructure'];
 
 // Initialize worker
 const aiStudioWorker = new AiStudioWorker();

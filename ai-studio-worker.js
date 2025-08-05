@@ -424,9 +424,9 @@ class AiStudioWorker {
                         console.log('❌ Nội dung không phải JSON hợp lệ');
                     }
                 }
-            } else {
+            } 
+                else {
                 const contentBlocks = await this.driver.findElements(By.css('.markdown, .chat-turn-container'));
-
                 if (contentBlocks.length === 0) {
                     throw new Error('❌ Không tìm thấy khối kết quả từ AI');
                 }
@@ -434,6 +434,25 @@ class AiStudioWorker {
                 const finalBlock = contentBlocks[contentBlocks.length - 1];
                 resultData = await finalBlock.getText();
                 resultData = resultData.trim();
+                // nếu type là 'restructure' thì xử lý kết quả html
+                if (type === 'restructure') {
+                    // resultData là 1 chuỗi string bao gồm text và các html string.
+                    // trong resultData chỉ lấy các ký tự từ thẻ div có id="restructure" tới hết thẻ div tương ứng.
+                    const $ = cheerio.load(resultData);
+                    const restructureDiv = $('#restructure');
+                    if (restructureDiv.length === 0) {
+                        throw new Error('❌ Không tìm thấy thẻ <div id="restructure"> trong kết quả');
+                    }
+                    resultData = restructureDiv.html();
+                    if (!resultData) {
+                        throw new Error('❌ Không tìm thấy nội dung trong thẻ <div id="restructure">');
+                    }
+                    
+                }
+
+                // trường hợp này đang trả về html string, với inline css
+                // Xử lý kết quả HTML, loại bỏ cá phần tử ko thuộc html
+                
             }
 
             console.log('result data');
