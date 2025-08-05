@@ -443,10 +443,25 @@ class AiStudioWorker {
                     if (restructureDiv.length === 0) {
                         throw new Error('❌ Không tìm thấy thẻ <div id="restructure"> trong kết quả');
                     }
-                    resultData = restructureDiv.html();
+                    // Lấy cả thẻ div bao gồm cả tag <div id="restructure"> và nội dung bên trong
+                    resultData = $.html(restructureDiv);
                     if (!resultData) {
                         throw new Error('❌ Không tìm thấy nội dung trong thẻ <div id="restructure">');
                     }
+                    
+                    // Loại bỏ tất cả text nodes không nằm trong thẻ HTML nào
+                    const cleanedHtml = cheerio.load(resultData);
+                    cleanedHtml('*').contents().filter(function() {
+                        return this.type === 'text' && this.parent.type === 'root';
+                    }).remove();
+                    
+                    // Loại bỏ text nodes trống hoặc chỉ chứa whitespace ở mọi cấp độ
+                    cleanedHtml('*').contents().filter(function() {
+                        return this.type === 'text' && !this.data.trim();
+                    }).remove();
+                    
+                    resultData = cleanedHtml.html();
+                    
                     
                 }
 
