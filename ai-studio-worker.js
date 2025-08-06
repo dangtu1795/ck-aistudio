@@ -257,51 +257,146 @@ class AiStudioWorker {
 
     async clickDownloadButton() {
         try {
-            // click button has mattooltip = Download
-            const buttons = await this.driver.wait(
-                until.elementsLocated(By.css('button[mattooltip="Download"]')),
-                10000,
-            );
-            if (buttons.length > 0) {
-                await buttons[0].click();
-                console.log('✅ Đã click nút Download.');
-            } else {
+            // Thử nhiều selector khác nhau để tìm nút Download
+            const selectors = [
+                'button[mattooltip="Download"]',
+                'button[iconname="download"]',
+                '.actions-container button[mattooltip="Download"]',
+                '.actions-container button[iconname="download"]',
+                'button .material-symbols-outlined:contains("download")',
+                'button span:contains("download")'
+            ];
+
+            let downloadButton = null;
+            
+            for (const selector of selectors) {
+                try {
+                    const buttons = await this.driver.findElements(By.css(selector));
+                    if (buttons.length > 0) {
+                        // Tìm button có thể click được (visible và enabled)
+                        for (const button of buttons) {
+                            if (await button.isDisplayed() && await button.isEnabled()) {
+                                downloadButton = button;
+                                console.log(`✅ Tìm thấy nút Download với selector: ${selector}`);
+                                break;
+                            }
+                        }
+                        if (downloadButton) break;
+                    }
+                } catch (selectorError) {
+                    // Continue to next selector
+                    continue;
+                }
+            }
+
+            if (!downloadButton) {
                 console.log('❌ Không tìm thấy nút Download.');
+                return;
+            }
+
+            // Scroll đến button để đảm bảo nó visible
+            await this.driver.executeScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", downloadButton);
+            await this.sleep(500);
+
+            // Thử click bằng JavaScript trước
+            try {
+                await this.driver.executeScript("arguments[0].click();", downloadButton);
+                console.log('✅ Đã click nút Download (JavaScript).');
+            } catch (jsError) {
+                // Fallback to normal click
+                await downloadButton.click();
+                console.log('✅ Đã click nút Download (click thường).');
             }
         } catch (error) {
             console.log('❌ Lỗi khi bấm nút Download:', error.message);
+            throw error;
         }
     }
 
     async clickCopyToClipboard() {
         try {
-            // const footers = await this.driver.wait(until.elementsLocated(By.css('footer .actions')), 10000);
+            // Thử nhiều selector khác nhau để tìm nút Copy
+            const selectors = [
+                'button[mattooltip="Copy to clipboard"]',
+                'button[iconname="content_copy"]',
+                '.actions-container button[mattooltip="Copy to clipboard"]',
+                '.actions-container button[iconname="content_copy"]',
+                'button .material-symbols-outlined:contains("content_copy")',
+                'button span:contains("content_copy")'
+            ];
 
-            // for (const footer of footers) {
-            //     const buttons = await footer.findElements(By.css('button'));
-            //     for (const button of buttons) {
-            //         const innerHTML = await button.getAttribute('innerHTML');
-            //         if (innerHTML && innerHTML.includes('content_copy')) {
-            //             await button.click();
-            //             console.log('✅ Đã click nút Copy to clipboard.');
-            //             return;
-            //         }
-            //     }
-            // }
-
-            // click button has mattooltip="Copy to clipboard"
-            const copyButtons = await this.driver.wait(
-                until.elementsLocated(By.css('button[mattooltip="Copy to clipboard"]')),
-                10000,
-            );
-            if (copyButtons.length > 0) {
-                await copyButtons[0].click();
-                console.log('✅ Đã click nút Copy to clipboard.');
-            } else {
-                console.log('❌ Không tìm thấy nút Copy.');
+            let copyButton = null;
+            
+            for (const selector of selectors) {
+                try {
+                    const buttons = await this.driver.findElements(By.css(selector));
+                    if (buttons.length > 0) {
+                        // Tìm button có thể click được (visible và enabled)
+                        for (const button of buttons) {
+                            if (await button.isDisplayed() && await button.isEnabled()) {
+                                copyButton = button;
+                                console.log(`✅ Tìm thấy nút Copy với selector: ${selector}`);
+                                break;
+                            }
+                        }
+                        if (copyButton) break;
+                    }
+                } catch (selectorError) {
+                    // Continue to next selector
+                    continue;
+                }
             }
+
+            if (!copyButton) {
+                console.log('❌ Không tìm thấy nút Copy với tất cả selector.');
+                return;
+            }
+
+            // Scroll đến button để đảm bảo nó visible
+            await this.driver.executeScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", copyButton);
+            await this.sleep(500);
+
+            // Thử click bằng nhiều cách khác nhau
+            let clickSuccess = false;
+            
+            // Cách 1: Click bình thường
+            try {
+                await copyButton.click();
+                clickSuccess = true;
+                console.log('✅ Đã click nút Copy (click thường).');
+            } catch (clickError) {
+                console.log('⚠️ Click thường thất bại, thử JavaScript click...');
+                
+                // Cách 2: Click bằng JavaScript
+                try {
+                    await this.driver.executeScript("arguments[0].click();", copyButton);
+                    clickSuccess = true;
+                    console.log('✅ Đã click nút Copy (JavaScript click).');
+                } catch (jsError) {
+                    console.log('⚠️ JavaScript click thất bại, thử Actions...');
+                    
+                    // Cách 3: Sử dụng Actions để move và click
+                    try {
+                        const actions = this.driver.actions();
+                        await actions.move({origin: copyButton}).click().perform();
+                        clickSuccess = true;
+                        console.log('✅ Đã click nút Copy (Actions).');
+                    } catch (actionsError) {
+                        console.log('❌ Tất cả phương thức click đều thất bại');
+                        console.log('Click error:', clickError.message);
+                        console.log('JS error:', jsError.message);
+                        console.log('Actions error:', actionsError.message);
+                    }
+                }
+            }
+
+            if (!clickSuccess) {
+                throw new Error('Không thể click nút Copy sau khi thử tất cả phương thức');
+            }
+
         } catch (error) {
             console.log('❌ Lỗi khi bấm nút Copy:', error.message);
+            throw error; // Re-throw để trigger fallback trong processPrompt
         }
     }
 
@@ -367,23 +462,53 @@ class AiStudioWorker {
                 await this.safeProcessPrompt(prompt, requestId, callbackUrl, temperature, type);
                 return;
             }
-
             let resultData = null;
-
-            if (['stock', 'news', 'market'].includes(type)) {
+            if (['stock', 'news', 'market','newrestructure'].includes(type)) {
                 // xoa du lieu trong clipboard
                 await this.driver.executeScript('navigator.clipboard.writeText("");');
                 console.log('✅ Đã xóa clipboard trước khi lấy kết quả');
                 console.log('📋 Đang lấy kết quả từ clipboard...');
-                await this.clickCopyToClipboard();
-                await this.sleep(1000);
-
-                let clipboardContent = await this.driver.executeScript('return navigator.clipboard.readText();');
-                console.log('clipboard content');
-                // Nếu clipboardContent là rỗng thì quăng ra lỗi để hàm safe_processPrompt tự xử lý lại
-                if (!clipboardContent) {
-                    throw new Error('❌ Clipboard is empty, retrying...');
+                
+                let clipboardContent = '';
+                let copySuccess = false;
+                
+                try {
+                    await this.clickCopyToClipboard();
+                    await this.sleep(1500); // Tăng thời gian chờ
+                    
+                    clipboardContent = await this.driver.executeScript('return navigator.clipboard.readText();');
+                    console.log('clipboard content');
+                    
+                    if (clipboardContent && clipboardContent.trim()) {
+                        copySuccess = true;
+                        console.log('✅ Lấy nội dung từ clipboard thành công');
+                    } else {
+                        console.log('⚠️ Clipboard vẫn trống sau khi click Copy');
+                    }
+                } catch (copyError) {
+                    console.log('❌ Lỗi khi copy to clipboard:', copyError.message);
                 }
+
+                // Nếu clipboard thất bại, thử download file
+                if (!copySuccess || !clipboardContent) {
+                    console.log('📥 Thử lấy kết quả bằng cách download file...');
+                    try {
+                        await this.clickDownloadButton();
+                        await this.sleep(3000); // Chờ file download
+                        const content = await this.readLatestTxtFileAndDelete();
+                        console.log('📄 Đã lấy nội dung từ file download');
+                        clipboardContent = content;
+                        copySuccess = true;
+                    } catch (downloadError) {
+                        console.log('❌ Lỗi khi download file:', downloadError.message);
+                    }
+                }
+
+                // Nếu cả clipboard và download đều thất bại
+                if (!copySuccess || !clipboardContent) {
+                    throw new Error('❌ Không thể lấy kết quả từ clipboard hoặc download, retrying...');
+                }
+
                 // Log clipboard content
                 console.log(clipboardContent);
 
@@ -403,25 +528,16 @@ class AiStudioWorker {
                     }
                 }
 
-                if (!clipboardContent.startsWith('{') || !clipboardContent.endsWith('}')) {
-                    console.log('❌ Clipboard không phải JSON hợp lệ, thử click nút Download');
-                    await this.clickDownloadButton();
-                    await this.sleep(2000);
-                    const content = await this.readLatestTxtFileAndDelete();
-                    console.log('📄 Nội dung file:');
-                    console.log(content);
-                    resultData = content;
-                } else {
-                    resultData = clipboardContent;
-                    console.log('📋 Đã lấy nội dung từ clipboard');
-                }
+                resultData = clipboardContent;
+                console.log('📋 Đã xử lý nội dung thành công');
+                
                 // xử lý result data, trả về định dạng json string, loại bỏ các phần tử nằm ngoài {}
                 if (typeof resultData === 'string') {
                     try {
                         const jsonData = JSON.parse(resultData);
                         resultData = JSON.stringify(jsonData);
                     } catch (error) {
-                        console.log('❌ Nội dung không phải JSON hợp lệ');
+                        console.log('⚠️ Nội dung không phải JSON hợp lệ, giữ nguyên định dạng string');
                     }
                 }
             } 
