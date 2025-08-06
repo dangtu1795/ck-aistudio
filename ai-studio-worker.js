@@ -463,7 +463,7 @@ class AiStudioWorker {
                 return;
             }
             let resultData = null;
-            if (['stock', 'news', 'market','newrestructure'].includes(type)) {
+            if (['stock', 'news', 'market', 'restructure'].includes(type)) {
                 // xoa du lieu trong clipboard
                 await this.driver.executeScript('navigator.clipboard.writeText("");');
                 console.log('✅ Đã xóa clipboard trước khi lấy kết quả');
@@ -541,7 +541,7 @@ class AiStudioWorker {
                     }
                 }
             } 
-                else {
+            else {
                 const contentBlocks = await this.driver.findElements(By.css('.markdown, .chat-turn-container'));
                 if (contentBlocks.length === 0) {
                     throw new Error('❌ Không tìm thấy khối kết quả từ AI');
@@ -550,80 +550,7 @@ class AiStudioWorker {
                 const finalBlock = contentBlocks[contentBlocks.length - 1];
                 resultData = await finalBlock.getText();
                 resultData = resultData.trim();
-                console.log('before process');
-                console.log(resultData);
-                console.log('end before process');
-                // nếu type là 'restructure' thì xử lý kết quả html
-                if (type === 'restructure') {
-                    // resultData là 1 chuỗi string bao gồm text và các html string.
-                    // trong resultData chỉ lấy các ký tự từ thẻ div có id="restructure" tới hết thẻ div tương ứng.
-                    const $ = cheerio.load(resultData);
-                    const restructureDiv = $('#restructure');
-                    if (restructureDiv.length === 0) {
-                        throw new Error('❌ Không tìm thấy thẻ <div id="restructure"> trong kết quả');
-                    }
-                    // Lấy cả thẻ div bao gồm cả tag <div id="restructure"> và nội dung bên trong
-                    resultData = $.html(restructureDiv);
-                    if (!resultData) {
-                        throw new Error('❌ Không tìm thấy nội dung trong thẻ <div id="restructure">');
-                    }
-                    
-                    // Loại bỏ tất cả text nodes không nằm trong thẻ HTML nào
-                    const cleanedHtml = cheerio.load(resultData);
-                    
-                    // Chiến lược: Chỉ giữ lại text nodes nằm trong các thẻ HTML có ý nghĩa
-                    // và loại bỏ tất cả text nodes ở cấp độ cao (body, html, root)
-                    
-                    // 1. Loại bỏ tất cả text nodes trực tiếp con của body
-                    cleanedHtml('body').contents().filter(function() {
-                        return this.type === 'text';
-                    }).remove();
-                    
-                    // 2. Loại bỏ tất cả text nodes trực tiếp con của html
-                    cleanedHtml('html').contents().filter(function() {
-                        return this.type === 'text';
-                    }).remove();
-                    
-                    // 3. Loại bỏ tất cả text nodes ở root level
-                    cleanedHtml.root().contents().filter(function() {
-                        return this.type === 'text';
-                    }).remove();
-                    
-                    // 4. Loại bỏ text nodes trực tiếp con của div#restructure (không nằm trong thẻ con)
-                    cleanedHtml('#restructure').contents().filter(function() {
-                        return this.type === 'text';
-                    }).remove();
-                    
-                    // 5. Loại bỏ text nodes trống hoặc chỉ chứa whitespace
-                    cleanedHtml('*').contents().filter(function() {
-                        return this.type === 'text' && !this.data.trim();
-                    }).remove();
-                    
-                    // 6. Loại bỏ text nodes không có parent là thẻ có ý nghĩa (p, h1, h2, h3, li, span, strong, em, div với class/style)
-                    cleanedHtml('*').contents().filter(function() {
-                        if (this.type !== 'text') return false;
-                        if (!this.data.trim()) return true; // Loại bỏ text trống
-                        
-                        const parent = this.parent;
-                        if (!parent || !parent.name) return true; // Loại bỏ nếu không có parent tag
-                        
-                        // Danh sách các thẻ được phép chứa text có ý nghĩa
-                        const allowedTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'span', 'strong', 'em', 'b', 'i', 'u', 'a', 'td', 'th', 'label', 'style', 'script'];
-                        
-                        // Chỉ giữ text nếu parent là thẻ được phép, hoặc là div có class/style (có format)
-                        const isAllowedTag = allowedTags.includes(parent.name);
-                        const isDivWithAttributes = parent.name === 'div' && (parent.attribs.class || parent.attribs.style);
-                        
-                        return !(isAllowedTag || isDivWithAttributes);
-                    }).remove();
-                    
-                    resultData = cleanedHtml.html();
-                    
-                    
-                }
-
-                // trường hợp này đang trả về html string, với inline css
-                // Xử lý kết quả HTML, loại bỏ cá phần tử ko thuộc html
+                
                 
             }
 
