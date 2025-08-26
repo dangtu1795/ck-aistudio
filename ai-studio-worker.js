@@ -219,7 +219,7 @@ class AiStudioWorker {
         }
     }
 
-    async clickRunButton(temperature, maxRetries = 3) {
+    async clickRunButton(temperature, maxRetries = 2) {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
                 console.log(`🔄 Thử click nút Run - lần ${attempt + 1}`);
@@ -620,7 +620,7 @@ class AiStudioWorker {
         }
     }
 
-    async safeProcessPrompt(prompt, requestId, callbackUrl, temperature, type, maxRetries = 1) {
+    async safeProcessPrompt(prompt, requestId, callbackUrl, temperature, type, maxRetries = 2) {
         // trước khi xử lý, gửi callback về cho server để thông báo đang xử lý
         const resultPayload = {
             request_id: requestId,
