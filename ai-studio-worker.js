@@ -620,7 +620,7 @@ class AiStudioWorker {
         }
     }
 
-    async safeProcessPrompt(prompt, requestId, callbackUrl, temperature, type, maxRetries = 3) {
+    async safeProcessPrompt(prompt, requestId, callbackUrl, temperature, type, maxRetries = 1) {
         // trước khi xử lý, gửi callback về cho server để thông báo đang xử lý
         const resultPayload = {
             request_id: requestId,
