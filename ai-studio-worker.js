@@ -30,10 +30,10 @@ class AiStudioWorker {
     createChromeOptions() {
         // Use consistent profile directory - reuse the same profile each time
         const tempProfile = this.profilePath; // Use the existing profilePath from constructor
-        
+
         // Store the temp profile path for cleanup
         this.tempProfilePath = tempProfile;
-        
+
         fs.ensureDirSync(tempProfile);
 
         const options = new chrome.Options();
@@ -132,43 +132,90 @@ class AiStudioWorker {
 
     async setTemperatureValue(temperature) {
         try {
-            // const tempInput = await this.driver.wait(
-            //     until.elementLocated(By.css('input.manual-input[type="number"]')),
-            //     10000,
-            // );
+            // Thử nhiều selector khác nhau để tìm input temperature
+            const selectors = [
+                'input[ms-input][type="number"]',  // Selector mới
+                'input.v3-font-label[type="number"]',  // Selector mới với class
+                'input[type="number"][min="0"][max="2"]',  // Selector theo attributes
+                'input.manual-input[type="number"]',  // Selector cũ
+                'input[type="number"]'  // Fallback selector
+            ];
 
-            // await this.driver.executeScript(
-            //     `
-            //     const input = arguments[0];
-            //     const value = arguments[1];
-            //     input.value = value;
-            //     input.dispatchEvent(new Event('input', { bubbles: true }));
-            //     input.dispatchEvent(new Event('change', { bubbles: true }));
-            // `,
-            //     tempInput,
-            //     parseFloat(temperature),
-            // );
+            let tempInput = null;
 
-            // set input has class="manual-input" and type="number"
-            const tempInput = await this.driver.wait(
-                until.elementLocated(By.css('input.manual-input[type="number"]')),
-                10000,
-            );
+            for (const selector of selectors) {
+                try {
+                    const inputs = await this.driver.findElements(By.css(selector));
+                    if (inputs.length > 0) {
+                        // Tìm input có thể edit được (visible và enabled)
+                        for (const input of inputs) {
+                            if (await input.isDisplayed() && await input.isEnabled()) {
+                                tempInput = input;
+                                console.log(`✅ Tìm thấy temperature input với selector: ${selector}`);
+                                break;
+                            }
+                        }
+                        if (tempInput) break;
+                    }
+                } catch (selectorError) {
+                    // Continue to next selector
+                    continue;
+                }
+            }
+
+            if (!tempInput) {
+                console.log('❌ Không tìm thấy temperature input với tất cả selector.');
+                return;
+            }
+
+            // Scroll đến input để đảm bảo nó visible
+            await this.driver.executeScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", tempInput);
+            await this.sleep(300);
+
+            // Clear input trước khi set giá trị mới
+            await tempInput.clear();
+            await this.sleep(100);
+
+            // Set giá trị bằng JavaScript để đảm bảo tương thích
             await this.driver.executeScript(
                 `
                 const input = arguments[0];
                 const value = arguments[1];
-                input.value = value;
+                
+                // Clear existing value
+                input.value = '';
+                input.focus();
+                
+                // Set new value using native setter
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                nativeInputValueSetter.call(input, value.toString());
+                
+                // Trigger events
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('blur', { bubbles: true }));
             `,
                 tempInput,
                 parseFloat(temperature),
             );
 
-            console.log(`✅ Đã set temperature = ${temperature}`);
+            // Verify the value was set correctly
+            const actualValue = await tempInput.getAttribute('value');
+            console.log(`✅ Đã set temperature = ${temperature} (verified: ${actualValue})`);
+
         } catch (error) {
             console.log(`⚠️ Không set được temperature: ${error.message}`);
+
+            // Debug: Log page source for temperature input debugging
+            try {
+                const pageSource = await this.driver.getPageSource();
+                const tempInputMatch = pageSource.match(/<input[^>]*type="number"[^>]*>/gi);
+                if (tempInputMatch) {
+                    console.log('🔍 Found temperature inputs in page:', tempInputMatch);
+                }
+            } catch (debugError) {
+                console.log(`⚠️ Không thể debug temperature input: ${debugError.message}`);
+            }
         }
     }
 
@@ -268,7 +315,7 @@ class AiStudioWorker {
             ];
 
             let downloadButton = null;
-            
+
             for (const selector of selectors) {
                 try {
                     const buttons = await this.driver.findElements(By.css(selector));
@@ -326,7 +373,7 @@ class AiStudioWorker {
             ];
 
             let copyButton = null;
-            
+
             for (const selector of selectors) {
                 try {
                     const buttons = await this.driver.findElements(By.css(selector));
@@ -358,7 +405,7 @@ class AiStudioWorker {
 
             // Thử click bằng nhiều cách khác nhau
             let clickSuccess = false;
-            
+
             // Cách 1: Click bình thường
             try {
                 await copyButton.click();
@@ -366,7 +413,7 @@ class AiStudioWorker {
                 console.log('✅ Đã click nút Copy (click thường).');
             } catch (clickError) {
                 console.log('⚠️ Click thường thất bại, thử JavaScript click...');
-                
+
                 // Cách 2: Click bằng JavaScript
                 try {
                     await this.driver.executeScript("arguments[0].click();", copyButton);
@@ -374,11 +421,11 @@ class AiStudioWorker {
                     console.log('✅ Đã click nút Copy (JavaScript click).');
                 } catch (jsError) {
                     console.log('⚠️ JavaScript click thất bại, thử Actions...');
-                    
+
                     // Cách 3: Sử dụng Actions để move và click
                     try {
                         const actions = this.driver.actions();
-                        await actions.move({origin: copyButton}).click().perform();
+                        await actions.move({ origin: copyButton }).click().perform();
                         clickSuccess = true;
                         console.log('✅ Đã click nút Copy (Actions).');
                     } catch (actionsError) {
@@ -468,17 +515,17 @@ class AiStudioWorker {
                 await this.driver.executeScript('navigator.clipboard.writeText("");');
                 console.log('✅ Đã xóa clipboard trước khi lấy kết quả');
                 console.log('📋 Đang lấy kết quả từ clipboard...');
-                
+
                 let clipboardContent = '';
                 let copySuccess = false;
-                
+
                 try {
                     await this.clickCopyToClipboard();
                     await this.sleep(1500); // Tăng thời gian chờ
-                    
+
                     clipboardContent = await this.driver.executeScript('return navigator.clipboard.readText();');
                     console.log('clipboard content');
-                    
+
                     if (clipboardContent && clipboardContent.trim()) {
                         copySuccess = true;
                         console.log('✅ Lấy nội dung từ clipboard thành công');
@@ -530,7 +577,7 @@ class AiStudioWorker {
 
                 resultData = clipboardContent;
                 console.log('📋 Đã xử lý nội dung thành công');
-                
+
                 // xử lý result data, trả về định dạng json string, loại bỏ các phần tử nằm ngoài {}
                 if (typeof resultData === 'string') {
                     try {
@@ -540,7 +587,7 @@ class AiStudioWorker {
                         console.log('⚠️ Nội dung không phải JSON hợp lệ, giữ nguyên định dạng string');
                     }
                 }
-            } 
+            }
             else {
                 const contentBlocks = await this.driver.findElements(By.css('.markdown, .chat-turn-container'));
                 if (contentBlocks.length === 0) {
@@ -550,8 +597,8 @@ class AiStudioWorker {
                 const finalBlock = contentBlocks[contentBlocks.length - 1];
                 resultData = await finalBlock.getText();
                 resultData = resultData.trim();
-                
-                
+
+
             }
 
             console.log('result data');
@@ -626,7 +673,7 @@ class AiStudioWorker {
         if (this.driver) {
             await this.driver.quit();
         }
-        
+
         // Don't clean up the profile directory since we want to reuse it
         // The profile will be preserved for the next run
         console.log('✅ Chrome driver closed, profile preserved for next run');
